@@ -78,7 +78,9 @@ Step 500 | Total Loss: 0.00214
 ...
 Step 999 | Total Loss: 1.60237e-30 (Converged)
 ```
-
+<p align="center">
+  <img src="graphviz (1).svg" width="100%" />
+</p>
 ## 📚 Acknowledgements
 * **Andrej Karpathy:** For the original Python `micrograd` and his incredible educational content.
 * **Standard Template Library (STL):** Used extensively (`vector`, `set`, `functional`, `memory`) to keep the codebase dependency-free.
