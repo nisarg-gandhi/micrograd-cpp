@@ -4,6 +4,7 @@
 #include <functional>
 #include <memory>
 #include <set>
+#include <fstream>
 using namespace std;
 
 double random_uniform(double min, double max){
@@ -17,7 +18,8 @@ class Value : public enable_shared_from_this<Value>
 public:
     double data;
     double grad;
-
+    string op;
+    string label;
     vector<shared_ptr<Value>> _prev;
     function<void()> _backward;
 
@@ -31,7 +33,7 @@ public:
 
     friend shared_ptr<Value> operator+(shared_ptr<Value> a, shared_ptr<Value> b){
         auto out = make_shared<Value>(a->data + b->data, vector<shared_ptr<Value>>{a,b});
-
+        out->op="+";
         out->_backward = [out, a, b](){
             a->grad += 1.0 * out->grad;
             b->grad += 1.0 * out->grad;
@@ -42,7 +44,7 @@ public:
 
     friend shared_ptr<Value> operator*(shared_ptr<Value> a, shared_ptr<Value> b){
         auto out = make_shared<Value>(a->data*b->data, vector<shared_ptr<Value>>{a,b});
-
+        out->op="*";
         out->_backward = [out, a, b](){
             a->grad += b->data * out->grad;
             b->grad += a->data * out->grad;
@@ -54,7 +56,7 @@ public:
     shared_ptr<Value> relu(){
         double new_data = (data > 0)?data:0;
         auto out = make_shared<Value>(new_data, vector<shared_ptr<Value>>{shared_from_this()});
-
+        out->op="ReLU";
         auto self = shared_from_this();
         out->_backward = [out, self](){
             if (self->data > 0){
@@ -66,7 +68,7 @@ public:
     shared_ptr<Value> tanh(){
         double t = std::tanh(this->data);
         auto out = make_shared<Value>(t, vector<shared_ptr<Value>>{shared_from_this()});
-
+        out->op="tanh";
         auto self = shared_from_this();
         out->_backward = [out, self](){
             double y = out->data;
@@ -184,6 +186,38 @@ class MLP {
         return params;
     }
 };
+
+void draw_graph(shared_ptr<Value>root, string filename){
+    ofstream file(filename);
+    file << "digraph G{" << endl;
+    file << "rankdir=LR;" << endl;
+
+    set <Value*> visited;
+    function<void(shared_ptr<Value>)> build = [&](shared_ptr<Value> v){
+        if (visited.find(v.get()) != visited.end()) return;
+        visited.insert(v.get());
+
+        size_t id = (size_t )v.get();
+
+        file << " " << id << " [shape=record, label=\"{ " << (v->label.empty() ? "" : v->label + " | ") << "data " << v->data << " | " << "grad " << v->grad << " }\"];" << endl;
+
+        if (!v->_prev.empty()){
+            size_t op_id = id + 1;
+            file << " " << op_id << "[label=\"" << v->op << "\", shape=circle];" << endl;
+            file << "  " << op_id << " -> " << id << ";" << endl;
+            for(auto child : v->_prev){
+                file << "  " << (size_t)child.get() << " -> " << op_id << ";" << endl;
+                build(child);
+            }
+        }
+
+    };
+    build(root);
+
+    file << "}" << endl;
+    file.close();
+    cout << "Graph exported to " << filename << endl;
+}
 int main(){
     srand(time(0));
     vector<vector<double>> X = {
@@ -214,7 +248,7 @@ int main(){
         for(auto& p : params) p->grad = 0.0;
 
         loss->backward();
-
+        
         for(auto& p : params) {
             p->data -= 0.05 * p->grad;
         }
@@ -222,5 +256,6 @@ int main(){
         if (k % 10 == 0)
             cout << "Step " << k << " loss: " << loss->data << endl;
     }
-    
+
+    return 0;
 }
