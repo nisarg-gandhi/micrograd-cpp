@@ -1,14 +1,34 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.14)
+project(micrograd_cpp)
 
-# Project Name
-project(MicrogradCPP)
+set(CMAKE_CXX_STANDARD 14)
 
-# Standard C++17 (Good for modern features like shared_ptr)
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# Source files
-set(SOURCES src/main.cpp)
+if(POLICY CMP0148)
+  cmake_policy(SET CMP0148 NEW)
+endif()
 
-# Output executable name
-add_executable(micrograd ${SOURCES})
+
+find_package(Python COMPONENTS Interpreter Development REQUIRED)
+
+
+include(FetchContent)
+FetchContent_Declare(
+  pybind11
+  GIT_REPOSITORY https://github.com/pybind/pybind11
+  GIT_TAG        v2.11.1
+)
+FetchContent_MakeAvailable(pybind11)
+
+
+add_executable(demo src/main.cpp)
+
+
+pybind11_add_module(micrograd_cpp src/bindings.cpp)
+
+
+if(MSVC)
+  target_compile_options(micrograd_cpp PRIVATE /O2)
+else()
+  target_compile_options(micrograd_cpp PRIVATE -O3)
+endif()

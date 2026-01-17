@@ -32,3 +32,9 @@
 app
 main
 micrograd
+build/
+__pycache__/
+*.exe
+*.pyd
+*.dll
+.vscode/
